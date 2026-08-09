@@ -10,8 +10,8 @@ public sealed class RuleBasedSensitivityClassifier : ISensitivityClassifier
 {
     private static readonly string[] SensitiveTerms =
     [
-        "gps", "latitude", "longitude", "author", "creator", "owner",
-        "email", "phone", "serial", "device", "address", "person", "name",
+        "gps", "latitude", "longitude", "author", "creator", "owner", "artist",
+        "email", "phone", "serial", "device", "address", "person", "name", "software",
     ];
 
     /// <inheritdoc />
