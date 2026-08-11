@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
+using Metawipe.Core.Abstractions;
 using Metawipe.Core.Classification;
 using Metawipe.Core.Models;
 using Metawipe.Core.Readers;
+using Metawipe.Core.Routing;
 using Metawipe.Core.Scrubbers;
 
 if (args.Length == 0)
@@ -44,16 +46,18 @@ static async Task<int> RunInspectAsync(string[] args)
     }
 
     var classifier = new RuleBasedSensitivityClassifier();
-    var reader = new ImageMetadataReader(classifier);
+    var router = CreateFormatRouter(classifier);
     var magicBytes = ReadLeadingBytes(targetPath, 16);
 
-    if (!reader.CanRead(targetPath, magicBytes))
+    var route = router.ResolveReader(targetPath, magicBytes);
+    if (!route.IsSupported || route.Handler is null)
     {
-        Console.Error.WriteLine("Unsupported file type for inspect. Supported: JPEG, PNG, TIFF, HEIC/HEIF, WebP.");
+        Console.Error.WriteLine(route.Message);
+        Console.Error.WriteLine("Supported inspect formats: JPEG, PNG, TIFF, HEIC/HEIF, WebP, DOCX, XLSX, PPTX.");
         return 3;
     }
 
-    var document = await reader.ReadAsync(targetPath);
+    var document = await route.Handler.ReadAsync(targetPath);
     var report = BuildInspectReport(document);
 
     if (jsonOutput)
@@ -90,8 +94,7 @@ static async Task<int> RunScrubAsync(string[] args)
 
     var options = optionsResult.Options!;
     var classifier = new RuleBasedSensitivityClassifier();
-    var reader = new ImageMetadataReader(classifier);
-    var scrubber = new ImageMetadataScrubber(classifier);
+    var router = CreateFormatRouter(classifier);
 
     if (!File.Exists(targetPath) && !Directory.Exists(targetPath))
     {
@@ -114,9 +117,18 @@ static async Task<int> RunScrubAsync(string[] args)
     foreach (var inputPath in candidateFiles)
     {
         var magicBytes = ReadLeadingBytes(inputPath, 16);
-        if (!scrubber.CanScrub(inputPath, magicBytes))
+        var scrubberRoute = router.ResolveScrubber(inputPath, magicBytes);
+        if (!scrubberRoute.IsSupported || scrubberRoute.Handler is null)
         {
             skippedCount++;
+            continue;
+        }
+
+        var readerRoute = router.ResolveReader(inputPath, magicBytes);
+        if (!readerRoute.IsSupported || readerRoute.Handler is null)
+        {
+            failedCount++;
+            Console.Error.WriteLine($"FAILED {inputPath}: {readerRoute.Message}");
             continue;
         }
 
@@ -124,12 +136,13 @@ static async Task<int> RunScrubAsync(string[] args)
 
         if (options.DryRun)
         {
-            var inspection = await reader.ReadAsync(inputPath);
+            var inspection = await readerRoute.Handler.ReadAsync(inputPath);
             var removableFields = inspection.Fields.Where(field => field.Removable).ToList();
             var removeCount = removableFields.Count(field => options.Profile.ShouldRemove(field));
             var keepCount = removableFields.Count - removeCount;
 
             Console.WriteLine($"DRY-RUN {inputPath}");
+            Console.WriteLine($"  format: {scrubberRoute.FormatName}");
             Console.WriteLine($"  output: {outputPath}");
             Console.WriteLine($"  removable fields: {removableFields.Count}, would remove: {removeCount}, would keep: {keepCount}");
             processedCount++;
@@ -138,12 +151,20 @@ static async Task<int> RunScrubAsync(string[] args)
 
         try
         {
-            var result = await scrubber.ScrubAsync(inputPath, outputPath, options.Profile);
-            var verifyDocument = await reader.ReadAsync(outputPath);
+            var result = await scrubberRoute.Handler.ScrubAsync(inputPath, outputPath, options.Profile);
+
+            var outputMagicBytes = ReadLeadingBytes(outputPath, 16);
+            var verifyRoute = router.ResolveReader(outputPath, outputMagicBytes);
+            var verifyReader = verifyRoute.IsSupported && verifyRoute.Handler is not null
+                ? verifyRoute.Handler
+                : readerRoute.Handler;
+
+            var verifyDocument = await verifyReader.ReadAsync(outputPath);
             var sensitiveRemaining = verifyDocument.Fields.Count(field => field.IsSensitive);
             totalSensitiveRemaining += sensitiveRemaining;
 
             Console.WriteLine($"SCRUBBED {inputPath}");
+            Console.WriteLine($"  format: {scrubberRoute.FormatName}");
             Console.WriteLine($"  output: {result.OutputPath}");
             Console.WriteLine($"  removed fields: {result.RemovedFields}, kept fields: {result.KeptFields}");
             Console.WriteLine($"  verify sensitive remaining: {sensitiveRemaining}");
@@ -159,7 +180,7 @@ static async Task<int> RunScrubAsync(string[] args)
 
     if (processedCount == 0 && skippedCount > 0)
     {
-        Console.Error.WriteLine("No supported files found. Supported scrub formats: JPEG, PNG.");
+        Console.Error.WriteLine("No supported files found. Supported scrub formats: JPEG, PNG, DOCX, XLSX, PPTX.");
         return 3;
     }
 
@@ -304,6 +325,92 @@ static string BuildOutputPath(string inputPath, string originalTargetPath, strin
         : Path.Combine(outputRoot, relativeDirectory, cleanedFileName);
 }
 
+static FormatRouter CreateFormatRouter(ISensitivityClassifier classifier)
+{
+    var router = new FormatRouter();
+
+    var imageReader = new ImageMetadataReader(classifier);
+    var imageScrubber = new ImageMetadataScrubber(classifier);
+    var ooxmlReader = new OoxmlMetadataReader(classifier);
+    var ooxmlScrubber = new OoxmlMetadataScrubber(classifier);
+
+    router.RegisterReader(new FormatHandlerRegistration<IMetadataReader>(
+        "Image",
+        imageReader,
+        [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"],
+        MatchesImageMagic));
+
+    router.RegisterScrubber(new FormatHandlerRegistration<IMetadataScrubber>(
+        "Image",
+        imageScrubber,
+        [".jpg", ".jpeg", ".png"],
+        MatchesImageMagic));
+
+    router.RegisterReader(new FormatHandlerRegistration<IMetadataReader>(
+        "OOXML",
+        ooxmlReader,
+        [".docx", ".xlsx", ".pptx"],
+        MatchesZipMagic));
+
+    router.RegisterScrubber(new FormatHandlerRegistration<IMetadataScrubber>(
+        "OOXML",
+        ooxmlScrubber,
+        [".docx", ".xlsx", ".pptx"],
+        MatchesZipMagic));
+
+    return router;
+}
+
+static bool MatchesImageMagic(byte[] bytes)
+{
+    // JPEG
+    if (bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
+    {
+        return true;
+    }
+
+    // PNG
+    if (bytes.Length >= 8 &&
+        bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 &&
+        bytes[4] == 0x0D && bytes[5] == 0x0A && bytes[6] == 0x1A && bytes[7] == 0x0A)
+    {
+        return true;
+    }
+
+    // TIFF (little- or big-endian)
+    if (bytes.Length >= 4 &&
+        ((bytes[0] == 0x49 && bytes[1] == 0x49 && bytes[2] == 0x2A && bytes[3] == 0x00) ||
+         (bytes[0] == 0x4D && bytes[1] == 0x4D && bytes[2] == 0x00 && bytes[3] == 0x2A)))
+    {
+        return true;
+    }
+
+    // WEBP container: RIFF....WEBP
+    if (bytes.Length >= 12 &&
+        bytes[0] == (byte)'R' && bytes[1] == (byte)'I' && bytes[2] == (byte)'F' && bytes[3] == (byte)'F' &&
+        bytes[8] == (byte)'W' && bytes[9] == (byte)'E' && bytes[10] == (byte)'B' && bytes[11] == (byte)'P')
+    {
+        return true;
+    }
+
+    // HEIF/HEIC ISO BMFF
+    if (bytes.Length >= 12 &&
+        bytes[4] == (byte)'f' && bytes[5] == (byte)'t' && bytes[6] == (byte)'y' && bytes[7] == (byte)'p')
+    {
+        var brand = System.Text.Encoding.ASCII.GetString(bytes, 8, 4);
+        return brand is "heic" or "heif" or "heix" or "hevc" or "hevx" or "mif1" or "msf1";
+    }
+
+    return false;
+}
+
+static bool MatchesZipMagic(byte[] bytes) =>
+    bytes.Length >= 4 &&
+    bytes[0] == (byte)'P' &&
+    bytes[1] == (byte)'K' &&
+    bytes[2] is 0x03 or 0x05 or 0x07 &&
+    bytes[3] is 0x04 or 0x06 or 0x08;
+
 static void PrintUsage()
 {
     Console.WriteLine("Usage:");
@@ -311,6 +418,8 @@ static void PrintUsage()
     Console.WriteLine("  metawipe scrub <file|folder> [--recursive] [--dry-run] [--out DIR] [--keep field1,field2]");
     Console.WriteLine();
     Console.WriteLine("Examples:");
+    Console.WriteLine("  metawipe inspect ./photo.jpg");
+    Console.WriteLine("  metawipe inspect ./report.docx --json");
     Console.WriteLine("  metawipe scrub ./photo.jpg");
     Console.WriteLine("  metawipe scrub ./Exports --recursive --dry-run");
     Console.WriteLine("  metawipe scrub ./photo.jpg --keep orientation,icc-profile");
