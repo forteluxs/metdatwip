@@ -388,9 +388,13 @@ static async Task<int> RunRandomizeAsync(string[] args)
     {
         edits = MetadataRandomizer.GenerateOoxmlEdits();
     }
+    else if (ext is ".mp3" or ".wav")
+    {
+        edits = MetadataRandomizer.GenerateAudioEdits();
+    }
     else
     {
-        Console.Error.WriteLine("Randomize is supported for JPEG, PNG, DOCX, XLSX, PPTX.");
+        Console.Error.WriteLine("Randomize is supported for JPEG, PNG, DOCX, XLSX, PPTX, MP3, WAV.");
         return 3;
     }
 
@@ -560,6 +564,9 @@ static FormatRouter CreateFormatRouter(ISensitivityClassifier classifier)
     var ooxmlReader = new OoxmlMetadataReader(classifier);
     var ooxmlScrubber = new OoxmlMetadataScrubber(classifier);
     var ooxmlWriter = new OoxmlMetadataWriter(classifier);
+    var audioReader = new AudioMetadataReader(classifier);
+    var audioScrubber = new AudioMetadataScrubber(classifier);
+    var audioWriter = new AudioMetadataWriter(classifier);
 
     router.RegisterReader(new FormatHandlerRegistration<IMetadataReader>(
         "Image",
@@ -596,6 +603,21 @@ static FormatRouter CreateFormatRouter(ISensitivityClassifier classifier)
         ooxmlWriter,
         [".docx", ".xlsx", ".pptx"],
         MatchesZipMagic));
+
+    router.RegisterReader(new FormatHandlerRegistration<IMetadataReader>(
+        "Audio",
+        audioReader,
+        [".mp3", ".wav"]));
+
+    router.RegisterScrubber(new FormatHandlerRegistration<IMetadataScrubber>(
+        "Audio",
+        audioScrubber,
+        [".mp3", ".wav"]));
+
+    router.RegisterWriter(new FormatHandlerRegistration<IMetadataWriter>(
+        "Audio",
+        audioWriter,
+        [".mp3", ".wav"]));
 
     return router;
 }

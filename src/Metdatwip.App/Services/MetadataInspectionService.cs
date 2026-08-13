@@ -20,6 +20,8 @@ public sealed class MetadataInspectionService
         ".docx",
         ".xlsx",
         ".pptx",
+        ".mp3",
+        ".wav",
     ];
 
     private readonly IReadOnlyList<IMetadataReader> _readers;
@@ -31,6 +33,7 @@ public sealed class MetadataInspectionService
         [
             new ImageMetadataReader(classifier),
             new OoxmlMetadataReader(classifier),
+            new AudioMetadataReader(classifier),
         ];
     }
 

@@ -47,11 +47,15 @@ public partial class MainViewModel : ViewModelBase
             "Image", new ImageMetadataScrubber(classifier), [".jpg", ".jpeg", ".png"]));
         _router.RegisterScrubber(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataScrubber>(
             "OOXML", new OoxmlMetadataScrubber(classifier), [".docx", ".xlsx", ".pptx"]));
+        _router.RegisterScrubber(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataScrubber>(
+            "Audio", new AudioMetadataScrubber(classifier), [".mp3", ".wav"]));
 
         _router.RegisterWriter(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataWriter>(
             "Image", new ImageMetadataWriter(classifier), [".jpg", ".jpeg", ".png"]));
         _router.RegisterWriter(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataWriter>(
             "OOXML", new OoxmlMetadataWriter(classifier), [".docx", ".xlsx", ".pptx"]));
+        _router.RegisterWriter(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataWriter>(
+            "Audio", new AudioMetadataWriter(classifier), [".mp3", ".wav"]));
     }
 
     [RelayCommand]
@@ -127,9 +131,13 @@ public partial class MainViewModel : ViewModelBase
         {
             edits = MetadataRandomizer.GenerateOoxmlEdits();
         }
+        else if (ext is ".mp3" or ".wav")
+        {
+            edits = MetadataRandomizer.GenerateAudioEdits();
+        }
         else
         {
-            ErrorMessage = "Random metadata generation is supported for JPEG, PNG, DOCX, XLSX, PPTX.";
+            ErrorMessage = "Random metadata generation is supported for JPEG, PNG, DOCX, XLSX, PPTX, MP3, WAV.";
             return;
         }
 

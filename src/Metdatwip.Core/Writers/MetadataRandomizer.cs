@@ -107,5 +107,25 @@ public static class MetadataRandomizer
         ];
     }
 
+    /// <summary>
+    /// Generates a set of realistic randomized <see cref="MetadataEdit"/> fields for an audio file (MP3, WAV).
+    /// </summary>
+    public static List<MetadataEdit> GenerateAudioEdits()
+    {
+        var artist = GetRandom(Artists);
+        var year = Rnd.Next(2020, 2026);
+
+        return
+        [
+            new MetadataEdit("ID3v2", "Title", "Midnight Horizon"),
+            new MetadataEdit("ID3v2", "Artist", artist),
+            new MetadataEdit("ID3v2", "Album", "Acoustic Waves Sessions"),
+            new MetadataEdit("ID3v2", "Year", year.ToString()),
+            new MetadataEdit("ID3v2", "Genre", "Ambient / Lo-Fi"),
+            new MetadataEdit("ID3v2", "Software", "Logic Pro X 10.8"),
+            new MetadataEdit("ID3v2", "Copyright", $"Copyright {year} {artist}. All rights reserved."),
+        ];
+    }
+
     private static T GetRandom<T>(T[] array) => array[Rnd.Next(array.Length)];
 }
