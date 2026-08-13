@@ -22,6 +22,11 @@ public sealed class MetadataInspectionService
         ".pptx",
         ".mp3",
         ".wav",
+        ".mp4",
+        ".mov",
+        ".m4v",
+        ".mkv",
+        ".webm",
     ];
 
     private readonly IReadOnlyList<IMetadataReader> _readers;
@@ -34,6 +39,7 @@ public sealed class MetadataInspectionService
             new ImageMetadataReader(classifier),
             new OoxmlMetadataReader(classifier),
             new AudioMetadataReader(classifier),
+            new VideoMetadataReader(classifier),
         ];
     }
 

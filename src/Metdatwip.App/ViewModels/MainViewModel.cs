@@ -49,6 +49,8 @@ public partial class MainViewModel : ViewModelBase
             "OOXML", new OoxmlMetadataScrubber(classifier), [".docx", ".xlsx", ".pptx"]));
         _router.RegisterScrubber(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataScrubber>(
             "Audio", new AudioMetadataScrubber(classifier), [".mp3", ".wav"]));
+        _router.RegisterScrubber(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataScrubber>(
+            "Video", new VideoMetadataScrubber(classifier), [".mp4", ".mov", ".m4v", ".mkv", ".webm"]));
 
         _router.RegisterWriter(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataWriter>(
             "Image", new ImageMetadataWriter(classifier), [".jpg", ".jpeg", ".png"]));
@@ -56,6 +58,8 @@ public partial class MainViewModel : ViewModelBase
             "OOXML", new OoxmlMetadataWriter(classifier), [".docx", ".xlsx", ".pptx"]));
         _router.RegisterWriter(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataWriter>(
             "Audio", new AudioMetadataWriter(classifier), [".mp3", ".wav"]));
+        _router.RegisterWriter(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataWriter>(
+            "Video", new VideoMetadataWriter(classifier), [".mp4", ".mov", ".m4v", ".mkv", ".webm"]));
     }
 
     [RelayCommand]
@@ -135,9 +139,13 @@ public partial class MainViewModel : ViewModelBase
         {
             edits = MetadataRandomizer.GenerateAudioEdits();
         }
+        else if (ext is ".mp4" or ".mov" or ".m4v" or ".mkv" or ".webm")
+        {
+            edits = MetadataRandomizer.GenerateVideoEdits();
+        }
         else
         {
-            ErrorMessage = "Random metadata generation is supported for JPEG, PNG, DOCX, XLSX, PPTX, MP3, WAV.";
+            ErrorMessage = "Random metadata generation is supported for JPEG, PNG, DOCX, XLSX, PPTX, MP3, WAV, MP4, MOV, MKV, WEBM.";
             return;
         }
 

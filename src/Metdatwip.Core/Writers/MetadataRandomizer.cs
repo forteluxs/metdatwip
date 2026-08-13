@@ -127,5 +127,25 @@ public static class MetadataRandomizer
         ];
     }
 
+    /// <summary>
+    /// Generates a set of realistic randomized <see cref="MetadataEdit"/> fields for a video file (MP4, MOV, MKV, WEBM).
+    /// </summary>
+    public static List<MetadataEdit> GenerateVideoEdits()
+    {
+        var director = GetRandom(Artists);
+        var year = Rnd.Next(2021, 2026);
+
+        return
+        [
+            new MetadataEdit("MP4-Metadata", "Title", "Cinematic Motion Reel"),
+            new MetadataEdit("MP4-Metadata", "Artist", director),
+            new MetadataEdit("MP4-Metadata", "Album", "4K Ultra HD Collection"),
+            new MetadataEdit("MP4-Metadata", "Year", year.ToString()),
+            new MetadataEdit("MP4-Metadata", "Software", "DaVinci Resolve 18.6 (Macintosh)"),
+            new MetadataEdit("MP4-Metadata", "Comment", "Color graded in Rec.709 color space"),
+            new MetadataEdit("MP4-Metadata", "Copyright", $"Copyright {year} {director}. All rights reserved."),
+        ];
+    }
+
     private static T GetRandom<T>(T[] array) => array[Rnd.Next(array.Length)];
 }

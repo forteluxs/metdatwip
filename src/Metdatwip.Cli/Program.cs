@@ -392,9 +392,13 @@ static async Task<int> RunRandomizeAsync(string[] args)
     {
         edits = MetadataRandomizer.GenerateAudioEdits();
     }
+    else if (ext is ".mp4" or ".mov" or ".m4v" or ".mkv" or ".webm")
+    {
+        edits = MetadataRandomizer.GenerateVideoEdits();
+    }
     else
     {
-        Console.Error.WriteLine("Randomize is supported for JPEG, PNG, DOCX, XLSX, PPTX, MP3, WAV.");
+        Console.Error.WriteLine("Randomize is supported for JPEG, PNG, DOCX, XLSX, PPTX, MP3, WAV, MP4, MOV, MKV, WEBM.");
         return 3;
     }
 
@@ -568,6 +572,10 @@ static FormatRouter CreateFormatRouter(ISensitivityClassifier classifier)
     var audioScrubber = new AudioMetadataScrubber(classifier);
     var audioWriter = new AudioMetadataWriter(classifier);
 
+    var videoReader = new VideoMetadataReader(classifier);
+    var videoScrubber = new VideoMetadataScrubber(classifier);
+    var videoWriter = new VideoMetadataWriter(classifier);
+
     router.RegisterReader(new FormatHandlerRegistration<IMetadataReader>(
         "Image",
         imageReader,
@@ -613,6 +621,26 @@ static FormatRouter CreateFormatRouter(ISensitivityClassifier classifier)
         "Audio",
         audioScrubber,
         [".mp3", ".wav"]));
+
+    router.RegisterWriter(new FormatHandlerRegistration<IMetadataWriter>(
+        "Audio",
+        audioWriter,
+        [".mp3", ".wav"]));
+
+    router.RegisterReader(new FormatHandlerRegistration<IMetadataReader>(
+        "Video",
+        videoReader,
+        [".mp4", ".mov", ".m4v", ".mkv", ".webm"]));
+
+    router.RegisterScrubber(new FormatHandlerRegistration<IMetadataScrubber>(
+        "Video",
+        videoScrubber,
+        [".mp4", ".mov", ".m4v", ".mkv", ".webm"]));
+
+    router.RegisterWriter(new FormatHandlerRegistration<IMetadataWriter>(
+        "Video",
+        videoWriter,
+        [".mp4", ".mov", ".m4v", ".mkv", ".webm"]));
 
     router.RegisterWriter(new FormatHandlerRegistration<IMetadataWriter>(
         "Audio",
