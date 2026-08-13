@@ -1,4 +1,4 @@
-# metawipe — Project Plan
+# metdatwip — Project Plan
 
 ## Scope
 
@@ -17,7 +17,7 @@ A cross-platform (Windows 10/11 + macOS) desktop utility to **view and remove fi
 
 ## Architecture / tech approach
 
-- **Platform:** .NET 8. Shared, UI-free `Metawipe.Core` library holds all metadata logic so both the GUI and CLI (and tests) reuse it.
+- **Platform:** .NET 8. Shared, UI-free `Metdatwip.Core` library holds all metadata logic so both the GUI and CLI (and tests) reuse it.
 - **UI:** Avalonia UI (MVVM) for a single cross-platform codebase running on Windows and macOS. (WPF was rejected — Windows-only; Avalonia gives one shell for both targets, consistent with keeping parity.)
 - **Core interfaces:**
   - `IMetadataReader` → format-specific readers produce a normalized `MetadataDocument` (list of `MetadataField { Group, Name, Value, IsSensitive, Removable }`).
@@ -29,8 +29,8 @@ A cross-platform (Windows 10/11 + macOS) desktop utility to **view and remove fi
   - PDF: PdfPig / PDFsharp to read & clear the Info dictionary and XMP stream.
   - OOXML: `System.IO.Packaging` / DocumentFormat.OpenXml to clear `core.xml`, `app.xml`, and custom properties.
 - **Safety model:** never modify originals by default; write to `*.cleaned.*` or an `--out` folder. Two-phase batch (plan → apply) with dry-run. Always offer a verify re-scan.
-- **Persistence:** JSON settings + saved scrub profiles under `%APPDATA%\metawipe` (Windows) / `~/Library/Application Support/metawipe` (macOS).
-- **Testing:** xUnit against `Metawipe.Core` with fixture files (known EXIF/GPS, sample PDF, sample DOCX). Round-trip tests assert sensitive fields are gone and image pixels/PDF pages remain intact.
+- **Persistence:** JSON settings + saved scrub profiles under `%APPDATA%\metdatwip` (Windows) / `~/Library/Application Support/metdatwip` (macOS).
+- **Testing:** xUnit against `Metdatwip.Core` with fixture files (known EXIF/GPS, sample PDF, sample DOCX). Round-trip tests assert sensitive fields are gone and image pixels/PDF pages remain intact.
 
 ## Milestones
 
@@ -45,7 +45,7 @@ A cross-platform (Windows 10/11 + macOS) desktop utility to **view and remove fi
 
 - No cloud processing, accounts, or telemetry — ever.
 - Not a full photo/PDF/Office **editor** (no content editing, only metadata).
-- Not a forensic recovery tool; metawipe removes metadata, it does not attempt to recover deleted data.
+- Not a forensic recovery tool; metdatwip removes metadata, it does not attempt to recover deleted data.
 - No steganography detection/removal in v1.
 - No mobile (iOS/Android) targets in v1.
 - Not a general file manager or duplicate finder (see sibling tools file-lantern, dupe-sweeper).
