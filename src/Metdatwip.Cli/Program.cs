@@ -532,12 +532,11 @@ static List<string> ResolveCandidateFiles(string targetPath, bool recursive)
 
 static string BuildOutputPath(string inputPath, string originalTargetPath, string? outputDirectory)
 {
-    var fileName = Path.GetFileNameWithoutExtension(inputPath);
-    var extension = Path.GetExtension(inputPath);
-    var cleanedFileName = $"{fileName}.cleaned{extension}";
-
     if (string.IsNullOrWhiteSpace(outputDirectory))
     {
+        var fileName = Path.GetFileNameWithoutExtension(inputPath);
+        var extension = Path.GetExtension(inputPath);
+        var cleanedFileName = $"{fileName}.cleaned{extension}";
         var inputDirectory = Path.GetDirectoryName(inputPath) ?? Directory.GetCurrentDirectory();
         return Path.Combine(inputDirectory, cleanedFileName);
     }
@@ -546,16 +545,25 @@ static string BuildOutputPath(string inputPath, string originalTargetPath, strin
 
     if (File.Exists(originalTargetPath))
     {
+        if (Path.HasExtension(outputDirectory) && !Directory.Exists(outputRoot))
+        {
+            return outputRoot;
+        }
+
+        var fileName = Path.GetFileNameWithoutExtension(inputPath);
+        var extension = Path.GetExtension(inputPath);
+        var cleanedFileName = $"{fileName}.cleaned{extension}";
         return Path.Combine(outputRoot, cleanedFileName);
     }
 
     var sourceRoot = Path.GetFullPath(originalTargetPath);
     var relativePath = Path.GetRelativePath(sourceRoot, inputPath);
     var relativeDirectory = Path.GetDirectoryName(relativePath);
+    var defaultFileName = $"{Path.GetFileNameWithoutExtension(inputPath)}.cleaned{Path.GetExtension(inputPath)}";
 
     return string.IsNullOrWhiteSpace(relativeDirectory)
-        ? Path.Combine(outputRoot, cleanedFileName)
-        : Path.Combine(outputRoot, relativeDirectory, cleanedFileName);
+        ? Path.Combine(outputRoot, defaultFileName)
+        : Path.Combine(outputRoot, relativeDirectory, defaultFileName);
 }
 
 static FormatRouter CreateFormatRouter(ISensitivityClassifier classifier)

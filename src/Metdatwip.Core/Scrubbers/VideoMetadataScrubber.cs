@@ -38,6 +38,11 @@ public sealed class VideoMetadataScrubber : IMetadataScrubber
             throw new FileNotFoundException("Input video file not found.", inputPath);
         }
 
+        var inputFullPath = Path.GetFullPath(inputPath);
+        var outputFullPath = Path.GetFullPath(outputPath);
+        var isSameFile = string.Equals(inputFullPath, outputFullPath, StringComparison.OrdinalIgnoreCase);
+        var targetFile = isSameFile ? Path.Combine(Path.GetTempPath(), "metdatwip_scrub_vid_" + Guid.NewGuid().ToString("N") + Path.GetExtension(inputPath)) : outputFullPath;
+
         var inputBytes = await File.ReadAllBytesAsync(inputPath, cancellationToken);
         var beforeDocument = await _reader.ReadAsync(inputPath, cancellationToken);
 
@@ -53,21 +58,26 @@ public sealed class VideoMetadataScrubber : IMetadataScrubber
             resultBytes = inputBytes; // MKV passthrough
         }
 
-        var outDir = Path.GetDirectoryName(outputPath);
+        var outDir = Path.GetDirectoryName(outputFullPath);
         if (!string.IsNullOrWhiteSpace(outDir))
         {
             Directory.CreateDirectory(outDir);
         }
 
-        await File.WriteAllBytesAsync(outputPath, resultBytes, cancellationToken);
+        await File.WriteAllBytesAsync(targetFile, resultBytes, cancellationToken);
 
-        var afterDocument = await _reader.ReadAsync(outputPath, cancellationToken);
+        if (isSameFile)
+        {
+            File.Move(targetFile, outputFullPath, overwrite: true);
+        }
+
+        var afterDocument = await _reader.ReadAsync(outputFullPath, cancellationToken);
         var removedCount = beforeDocument.Fields.Count - afterDocument.Fields.Count;
         var keptCount = afterDocument.Fields.Count;
 
         return new ScrubResult(
             inputPath,
-            outputPath,
+            outputFullPath,
             Math.Max(0, removedCount),
             keptCount,
             true,
@@ -92,7 +102,37 @@ public sealed class VideoMetadataScrubber : IMetadataScrubber
 
             if (boxType == "udta")
             {
-                // Skip udta atom containing metadata
+                pos += boxSize;
+                continue;
+            }
+
+            if (boxType == "moov")
+            {
+                using var innerMoov = new MemoryStream();
+                var mpos = pos + 8;
+                var mend = pos + boxSize;
+
+                while (mpos + 8 <= mend)
+                {
+                    var msize = ReadInt32BigEndian(source, mpos);
+                    var mbtype = Encoding.ASCII.GetString(source, mpos + 4, 4);
+                    if (msize <= 0 || mpos + msize > mend) break;
+
+                    if (mbtype != "udta")
+                    {
+                        innerMoov.Write(source, mpos, msize);
+                    }
+
+                    mpos += msize;
+                }
+
+                var moovBytes = innerMoov.ToArray();
+                var newMoovHeader = new byte[8];
+                WriteInt32BigEndian(newMoovHeader, 0, 8 + moovBytes.Length);
+                Encoding.ASCII.GetBytes("moov").CopyTo(newMoovHeader, 4);
+                output.Write(newMoovHeader, 0, 8);
+                output.Write(moovBytes, 0, moovBytes.Length);
+
                 pos += boxSize;
                 continue;
             }
@@ -102,6 +142,14 @@ public sealed class VideoMetadataScrubber : IMetadataScrubber
         }
 
         return output.ToArray();
+    }
+
+    private static void WriteInt32BigEndian(byte[] bytes, int offset, int value)
+    {
+        bytes[offset] = (byte)((value >> 24) & 0xFF);
+        bytes[offset + 1] = (byte)((value >> 16) & 0xFF);
+        bytes[offset + 2] = (byte)((value >> 8) & 0xFF);
+        bytes[offset + 3] = (byte)(value & 0xFF);
     }
 
     private static int ReadInt32BigEndian(byte[] bytes, int offset)

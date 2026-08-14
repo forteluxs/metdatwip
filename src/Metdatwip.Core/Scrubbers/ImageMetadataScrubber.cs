@@ -61,10 +61,8 @@ public sealed class ImageMetadataScrubber : IMetadataScrubber
 
         var inputFullPath = Path.GetFullPath(inputPath);
         var outputFullPath = Path.GetFullPath(outputPath);
-        if (string.Equals(inputFullPath, outputFullPath, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException("Output path must be different from input path.");
-        }
+        var isSameFile = string.Equals(inputFullPath, outputFullPath, StringComparison.OrdinalIgnoreCase);
+        var targetFile = isSameFile ? Path.Combine(Path.GetTempPath(), "metdatwip_scrub_img_" + Guid.NewGuid().ToString("N") + Path.GetExtension(inputPath)) : outputFullPath;
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -84,16 +82,21 @@ public sealed class ImageMetadataScrubber : IMetadataScrubber
             _ => throw new NotSupportedException("Unsupported image format. Supported: JPEG, PNG."),
         };
 
-        var outputDirectory = Path.GetDirectoryName(outputPath);
+        var outputDirectory = Path.GetDirectoryName(outputFullPath);
         if (!string.IsNullOrWhiteSpace(outputDirectory))
         {
             Directory.CreateDirectory(outputDirectory);
         }
 
-        await File.WriteAllBytesAsync(outputPath, scrubbedBytes, cancellationToken);
+        await File.WriteAllBytesAsync(targetFile, scrubbedBytes, cancellationToken);
+
+        if (isSameFile)
+        {
+            File.Move(targetFile, outputFullPath, overwrite: true);
+        }
 
         var beforeDocument = await _reader.ReadAsync(inputPath, cancellationToken);
-        var afterDocument = await _reader.ReadAsync(outputPath, cancellationToken);
+        var afterDocument = await _reader.ReadAsync(outputFullPath, cancellationToken);
 
         var removedFields = Math.Max(0, beforeDocument.Fields.Count - afterDocument.Fields.Count);
         var keptFields = afterDocument.Fields.Count;
@@ -103,7 +106,7 @@ public sealed class ImageMetadataScrubber : IMetadataScrubber
             ? "Verification scan: 0 sensitive fields remaining."
             : $"Verification scan: {sensitiveRemaining} sensitive field(s) remaining.";
 
-        return new ScrubResult(inputPath, outputPath, removedFields, keptFields, true, message);
+        return new ScrubResult(inputPath, outputFullPath, removedFields, keptFields, true, message);
     }
 
     private static byte[] ScrubJpeg(byte[] source, RetentionPolicy retention)

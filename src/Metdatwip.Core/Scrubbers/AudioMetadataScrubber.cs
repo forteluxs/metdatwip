@@ -38,6 +38,11 @@ public sealed class AudioMetadataScrubber : IMetadataScrubber
             throw new FileNotFoundException("Input audio file not found.", inputPath);
         }
 
+        var inputFullPath = Path.GetFullPath(inputPath);
+        var outputFullPath = Path.GetFullPath(outputPath);
+        var isSameFile = string.Equals(inputFullPath, outputFullPath, StringComparison.OrdinalIgnoreCase);
+        var targetFile = isSameFile ? Path.Combine(Path.GetTempPath(), "metdatwip_scrub_aud_" + Guid.NewGuid().ToString("N") + Path.GetExtension(inputPath)) : outputFullPath;
+
         var inputBytes = await File.ReadAllBytesAsync(inputPath, cancellationToken);
         var beforeDocument = await _reader.ReadAsync(inputPath, cancellationToken);
 
@@ -53,22 +58,26 @@ public sealed class AudioMetadataScrubber : IMetadataScrubber
             resultBytes = ScrubWav(inputBytes);
         }
 
-        var outputDir = Path.GetDirectoryName(outputPath);
+        var outputDir = Path.GetDirectoryName(outputFullPath);
         if (!string.IsNullOrWhiteSpace(outputDir))
         {
             Directory.CreateDirectory(outputDir);
         }
 
-        await File.WriteAllBytesAsync(outputPath, resultBytes, cancellationToken);
+        await File.WriteAllBytesAsync(targetFile, resultBytes, cancellationToken);
 
-        var afterDocument = await _reader.ReadAsync(outputPath, cancellationToken);
+        if (isSameFile)
+        {
+            File.Move(targetFile, outputFullPath, overwrite: true);
+        }
+
+        var afterDocument = await _reader.ReadAsync(outputFullPath, cancellationToken);
         var removedCount = beforeDocument.Fields.Count - afterDocument.Fields.Count;
         var keptCount = afterDocument.Fields.Count;
-        var sensitiveRemaining = afterDocument.Fields.Count(f => f.IsSensitive);
 
         return new ScrubResult(
             inputPath,
-            outputPath,
+            outputFullPath,
             Math.Max(0, removedCount),
             keptCount,
             true,

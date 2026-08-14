@@ -65,10 +65,8 @@ public sealed class OoxmlMetadataScrubber : IMetadataScrubber
 
         var inputFullPath = Path.GetFullPath(inputPath);
         var outputFullPath = Path.GetFullPath(outputPath);
-        if (string.Equals(inputFullPath, outputFullPath, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException("Output path must be different from input path.");
-        }
+        var isSameFile = string.Equals(inputFullPath, outputFullPath, StringComparison.OrdinalIgnoreCase);
+        var targetFile = isSameFile ? Path.Combine(Path.GetTempPath(), "metdatwip_scrub_ooxml_" + Guid.NewGuid().ToString("N") + Path.GetExtension(inputPath)) : outputFullPath;
 
         var extension = Path.GetExtension(inputPath).ToLowerInvariant();
         if (!SupportedExtensions.Contains(extension))
@@ -80,20 +78,25 @@ public sealed class OoxmlMetadataScrubber : IMetadataScrubber
 
         var beforeDocument = await _reader.ReadAsync(inputPath, cancellationToken);
 
-        var outputDirectory = Path.GetDirectoryName(outputPath);
+        var outputDirectory = Path.GetDirectoryName(outputFullPath);
         if (!string.IsNullOrWhiteSpace(outputDirectory))
         {
             Directory.CreateDirectory(outputDirectory);
         }
 
-        File.Copy(inputPath, outputPath, overwrite: true);
+        File.Copy(inputPath, targetFile, overwrite: true);
 
-        using (var package = Package.Open(outputPath, FileMode.Open, FileAccess.ReadWrite))
+        using (var package = Package.Open(targetFile, FileMode.Open, FileAccess.ReadWrite))
         {
             ApplyProfile(package, profile, cancellationToken);
         }
 
-        var afterDocument = await _reader.ReadAsync(outputPath, cancellationToken);
+        if (isSameFile)
+        {
+            File.Move(targetFile, outputFullPath, overwrite: true);
+        }
+
+        var afterDocument = await _reader.ReadAsync(outputFullPath, cancellationToken);
         var removedFields = Math.Max(0, beforeDocument.Fields.Count - afterDocument.Fields.Count);
         var keptFields = afterDocument.Fields.Count;
         var sensitiveRemaining = afterDocument.Fields.Count(field => field.IsSensitive);
@@ -102,7 +105,7 @@ public sealed class OoxmlMetadataScrubber : IMetadataScrubber
             ? "Verification scan: 0 sensitive fields remaining."
             : $"Verification scan: {sensitiveRemaining} sensitive field(s) remaining.";
 
-        return new ScrubResult(inputPath, outputPath, removedFields, keptFields, true, message);
+        return new ScrubResult(inputPath, outputFullPath, removedFields, keptFields, true, message);
     }
 
     private static void ApplyProfile(Package package, ScrubProfile profile, CancellationToken cancellationToken)
