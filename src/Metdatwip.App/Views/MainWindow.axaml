@@ -7,7 +7,7 @@
         x:Class="Metdatwip.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="MetaDatWip v1.1.0 — Watermelon Privacy &amp; Metadata Engine 🍉"
+        Title="MetaDatWip v1.1.0 — Privacy &amp; Metadata Sanitizer Engine"
         Background="#160B12"
         Foreground="#FFE4E6"
         WindowStartupLocation="CenterScreen">
@@ -18,7 +18,7 @@
 
     <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20">
 
-        <!-- Header Bar (Watermelon Fresh Theme) -->
+        <!-- Header Bar -->
         <Border Grid.Row="0"
                 Background="#2A0E1A"
                 BorderBrush="#4C1D30"
@@ -28,12 +28,11 @@
                 Margin="0,0,0,16">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-                    <!-- Watermelon Flesh Icon Badge -->
                     <Border Background="#E11D48"
                             CornerRadius="10"
                             Padding="10,6"
                             VerticalAlignment="Center">
-                        <TextBlock Text="🍉" FontSize="20" />
+                        <TextBlock Text="🛡️" FontSize="18" />
                     </Border>
                     <StackPanel VerticalAlignment="Center" Spacing="2">
                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -41,20 +40,19 @@
                                        FontSize="22"
                                        FontWeight="Bold"
                                        Foreground="#FFF1F2" />
-                            <!-- Watermelon Rind Version Pill -->
                             <Border Background="#064E3B"
                                     BorderBrush="#059669"
                                     BorderThickness="1"
                                     CornerRadius="12"
                                     Padding="10,3"
                                     VerticalAlignment="Center">
-                                <TextBlock Text="v1.1.0 🍉"
+                                <TextBlock Text="v1.1.0"
                                            FontSize="11"
                                            FontWeight="Bold"
                                            Foreground="#A7F3D0" />
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="Watermelon Edition — Privacy &amp; Metadata Sanitizer Engine"
+                        <TextBlock Text="Enterprise Privacy &amp; Metadata Sanitizer Engine"
                                    FontSize="12"
                                    Foreground="#F472B6" />
                     </StackPanel>
@@ -117,7 +115,7 @@
             <StackPanel Spacing="14">
                 <Grid ColumnDefinitions="*,Auto">
                     <StackPanel Grid.Column="0" Spacing="4">
-                        <TextBlock Text="Drag &amp; Drop File or Folder Here 🍉"
+                        <TextBlock Text="Drag &amp; Drop File or Folder Here"
                                    FontSize="16"
                                    FontWeight="Bold"
                                    Foreground="#FFF1F2" />
@@ -267,7 +265,7 @@
                                                             Padding="8,3"
                                                             VerticalAlignment="Center"
                                                             IsVisible="{Binding IsSensitive}">
-                                                        <TextBlock Text="Sensitive 🍉"
+                                                        <TextBlock Text="Sensitive"
                                                                    FontSize="11"
                                                                    FontWeight="Bold"
                                                                    Foreground="#FFE4E6" />
