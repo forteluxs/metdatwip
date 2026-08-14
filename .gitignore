@@ -38,5 +38,10 @@ ehthumbs.db
 [Nn]ew[Nn]otebook.png
 Desktop.ini
 
+# Build & Publish output
+dist/
+artifacts/
+publish/
+
 # Antigravity artifacts
 .system_generated/
