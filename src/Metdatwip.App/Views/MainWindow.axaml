@@ -3,50 +3,81 @@
         xmlns:vm="using:Metdatwip.App.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="1080" d:DesignHeight="720"
+        mc:Ignorable="d" d:DesignWidth="1120" d:DesignHeight="780"
         x:Class="Metdatwip.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="MetaDatWip v1.1.0 — Privacy &amp; Metadata Editor">
+        Title="MetaDatWip v1.1.0 — Privacy &amp; Metadata Sanitizer Engine"
+        Background="#0B0F19"
+        Foreground="#F8FAFC"
+        WindowStartupLocation="CenterScreen">
 
     <Design.DataContext>
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="16">
-        <!-- Drop zone & Browse header -->
+    <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20">
+
+        <!-- Header Bar -->
         <Border Grid.Row="0"
-                CornerRadius="8"
-                BorderBrush="#4A5568"
-                BorderThickness="2"
-                Background="#1F2937"
-                Padding="20">
-            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="8">
-                    <TextBlock Text="Drop a file/folder or click Browse to inspect &amp; edit"
-                               FontSize="20"
-                               FontWeight="Bold" />
-                    <TextBlock Text="Supported: JPEG, PNG, TIFF, HEIC/HEIF, WebP, DOCX, XLSX, PPTX"
-                               Opacity="0.85"
-                               TextWrapping="Wrap" />
+                Background="#131B2E"
+                BorderBrush="#1E293B"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="16,12"
+                Margin="0,0,0,16">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Border Background="#2563EB"
+                            CornerRadius="8"
+                            Padding="10,6"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="🛡️" FontSize="18" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="MetaDatWip"
+                                       FontSize="20"
+                                       FontWeight="Bold"
+                                       Foreground="#F8FAFC" />
+                            <Border Background="#1E293B"
+                                    BorderBrush="#334155"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="8,2"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="v1.1.0"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="#38BDF8" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="Enterprise Privacy &amp; Metadata Sanitizer Engine"
+                                   FontSize="12"
+                                   Foreground="#94A3B8" />
+                    </StackPanel>
                 </StackPanel>
 
-                <!-- Action buttons -->
-                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <!-- Action Toolbar -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                     <Button Content="📁 Browse File..."
                             Click="OnBrowseFileClick"
-                            Background="#374151"
-                            Foreground="White"
-                            Padding="12,8"
-                            CornerRadius="6"
+                            Background="#1E293B"
+                            Foreground="#F8FAFC"
+                            BorderBrush="#334155"
+                            BorderThickness="1"
+                            Padding="14,9"
+                            CornerRadius="8"
+                            FontSize="13"
                             FontWeight="SemiBold" />
 
                     <Button Content="🎲 Randomize Metadata"
                             Command="{Binding PopulateRandomMetadataCommand}"
                             Background="#059669"
                             Foreground="White"
-                            Padding="12,8"
-                            CornerRadius="6"
+                            Padding="14,9"
+                            CornerRadius="8"
+                            FontSize="13"
                             FontWeight="SemiBold"
                             IsVisible="{Binding HasFileLoaded}" />
 
@@ -54,8 +85,9 @@
                             Command="{Binding SaveEditsCommand}"
                             Background="#2563EB"
                             Foreground="White"
-                            Padding="12,8"
-                            CornerRadius="6"
+                            Padding="14,9"
+                            CornerRadius="8"
+                            FontSize="13"
                             FontWeight="SemiBold"
                             IsVisible="{Binding HasFileLoaded}" />
 
@@ -63,115 +95,188 @@
                             Command="{Binding ScrubCurrentFileCommand}"
                             Background="#DC2626"
                             Foreground="White"
-                            Padding="12,8"
-                            CornerRadius="6"
+                            Padding="14,9"
+                            CornerRadius="8"
+                            FontSize="13"
                             FontWeight="SemiBold"
                             IsVisible="{Binding HasFileLoaded}" />
                 </StackPanel>
-
-                <!-- File Path Manual Entry Bar & Overwrite Checkbox -->
-                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0" ColumnSpacing="8">
-                    <TextBox Grid.Column="0"
-                             Text="{Binding InputFilePath, Mode=TwoWay}"
-                             PlaceholderText="Or paste/type file path here (e.g. /home/aaa/photo.jpg)..."
-                             Background="#111827"
-                             Foreground="White"
-                             BorderBrush="#374151"
-                             Padding="8,6"
-                             CornerRadius="4" />
-                    <Button Grid.Column="1"
-                            Content="🔍 Open &amp; Inspect"
-                            Command="{Binding InspectInputPathCommand}"
-                            Background="#4F46E5"
-                            Foreground="White"
-                            Padding="12,6"
-                            CornerRadius="4" />
-                    <CheckBox Grid.Column="2"
-                              IsChecked="{Binding OverwriteOriginalFile, Mode=TwoWay}"
-                              Content="Overwrite original file in-place"
-                              Foreground="#9CA3AF"
-                              VerticalAlignment="Center" />
-                </Grid>
-
-                <ProgressBar Grid.Row="1" Grid.ColumnSpan="2"
-                             IsIndeterminate="True"
-                             Height="4"
-                             Margin="0,8,0,0"
-                             IsVisible="{Binding IsBusy}" />
             </Grid>
         </Border>
 
-        <!-- Status area -->
-        <StackPanel Grid.Row="1" Margin="0,12,0,0" Spacing="4">
-            <TextBlock Text="Status" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#60A5FA" />
-            <TextBlock Text="{Binding ErrorMessage}"
-                       Foreground="#FCA5A5"
-                       TextWrapping="Wrap"
-                       IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        </StackPanel>
+        <!-- Drop Zone & File Control Panel -->
+        <Border Grid.Row="1"
+                Background="#111827"
+                BorderBrush="#1F2937"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="20"
+                Margin="0,0,0,16">
+            <StackPanel Spacing="14">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="4">
+                        <TextBlock Text="Drag &amp; Drop File or Folder Here"
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   Foreground="#F8FAFC" />
+                        <TextBlock Text="Supported Formats: JPEG, PNG, TIFF, HEIC, WebP | DOCX, XLSX, PPTX | MP3, WAV | MP4, MOV, MKV, WebM"
+                                   FontSize="12"
+                                   Foreground="#64748B"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
 
-        <!-- Inspected file path -->
-        <StackPanel Grid.Row="2" Margin="0,12,0,0" Spacing="4">
-            <TextBlock Text="Inspected file" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding SourcePath}" TextWrapping="Wrap" Opacity="0.8" />
-        </StackPanel>
+                <!-- Input Path Bar & Overwrite Checkbox -->
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                    <TextBox Grid.Column="0"
+                             Text="{Binding InputFilePath, Mode=TwoWay}"
+                             PlaceholderText="Paste file or directory path here (e.g. /home/user/media/photo.jpg)..."
+                             Background="#0F172A"
+                             Foreground="#F8FAFC"
+                             BorderBrush="#334155"
+                             BorderThickness="1"
+                             Padding="12,10"
+                             CornerRadius="8"
+                             FontSize="13" />
 
-        <!-- Metadata Field List with Editing inputs -->
-        <ScrollViewer Grid.Row="3" Margin="0,12,0,0">
+                    <Button Grid.Column="1"
+                            Content="🔍 Inspect &amp; Load"
+                            Command="{Binding InspectInputPathCommand}"
+                            Background="#4F46E5"
+                            Foreground="White"
+                            Padding="16,10"
+                            CornerRadius="8"
+                            FontSize="13"
+                            FontWeight="SemiBold" />
+
+                    <CheckBox Grid.Column="2"
+                              IsChecked="{Binding OverwriteOriginalFile, Mode=TwoWay}"
+                              Content="⚡ Overwrite Original File (In-Place)"
+                              Foreground="#CBD5E1"
+                              FontSize="13"
+                              VerticalAlignment="Center" />
+                </Grid>
+
+                <ProgressBar IsIndeterminate="True"
+                             Height="4"
+                             CornerRadius="2"
+                             Foreground="#38BDF8"
+                             IsVisible="{Binding IsBusy}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Status & Active File Banner -->
+        <Border Grid.Row="2"
+                Background="#0F172A"
+                BorderBrush="#1E293B"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="16,12"
+                Margin="0,0,0,16">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="📄 Source Path:" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" />
+                        <TextBlock Text="{Binding SourcePath}" FontSize="13" FontWeight="SemiBold" Foreground="#38BDF8" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding StatusMessage}"
+                               FontSize="13"
+                               Foreground="#E2E8F0"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ErrorMessage}"
+                               FontSize="13"
+                               Foreground="#EF4444"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Metadata Groups List (Expander Cards) -->
+        <ScrollViewer Grid.Row="3">
             <ItemsControl ItemsSource="{Binding MetadataGroups}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:MetadataGroupViewModel">
-                        <Expander IsExpanded="True" Margin="0,0,0,10">
-                            <Expander.Header>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="{Binding Header}" FontWeight="SemiBold" />
-                                    <Border Background="#7F1D1D"
-                                            CornerRadius="10"
-                                            Padding="8,2"
-                                            IsVisible="{Binding HasSensitiveFields}">
-                                        <TextBlock Text="{Binding SensitiveCount, StringFormat='Sensitive: {0}'}" Foreground="White" />
-                                    </Border>
-                                </StackPanel>
-                            </Expander.Header>
-
-                            <ItemsControl ItemsSource="{Binding Fields}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:MetadataFieldViewModel">
-                                        <Border BorderThickness="0,0,0,1" BorderBrush="#334155" Padding="0,6">
-                                            <Grid ColumnDefinitions="220,*,Auto" ColumnSpacing="12">
-                                                <!-- Field Name -->
-                                                <TextBlock Grid.Column="0"
-                                                           Text="{Binding Name}"
+                        <Border Background="#111827"
+                                BorderBrush="#1E293B"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Margin="0,0,0,14"
+                                Padding="12">
+                            <Expander IsExpanded="True" HorizontalAlignment="Stretch" Background="Transparent" BorderThickness="0">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,4">
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Header}"
+                                                       FontSize="15"
+                                                       FontWeight="Bold"
+                                                       Foreground="#F8FAFC" />
+                                            <Border Background="#7F1D1D"
+                                                    BorderBrush="#991B1B"
+                                                    BorderThickness="1"
+                                                    CornerRadius="12"
+                                                    Padding="10,3"
+                                                    VerticalAlignment="Center"
+                                                    IsVisible="{Binding HasSensitiveFields}">
+                                                <TextBlock Text="{Binding SensitiveCount, StringFormat='⚠️ Sensitive: {0}'}"
+                                                           FontSize="11"
                                                            FontWeight="SemiBold"
-                                                           VerticalAlignment="Center"
-                                                           TextWrapping="Wrap" />
+                                                           Foreground="#FCA5A5" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Grid>
+                                </Expander.Header>
 
-                                                <!-- Editable Value TextBox -->
-                                                <TextBox Grid.Column="1"
-                                                         Text="{Binding Value, Mode=TwoWay}"
-                                                         Background="#1E293B"
-                                                         Foreground="White"
-                                                         BorderBrush="#475569"
-                                                         Padding="6,4"
-                                                         CornerRadius="4"
-                                                         VerticalAlignment="Center" />
+                                <ItemsControl ItemsSource="{Binding Fields}" Margin="0,8,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:MetadataFieldViewModel">
+                                            <Border BorderThickness="0,0,0,1"
+                                                    BorderBrush="#1E293B"
+                                                    Padding="6,8">
+                                                <Grid ColumnDefinitions="240,*,Auto" ColumnSpacing="14">
+                                                    <!-- Field Label -->
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding Name}"
+                                                               FontSize="13"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="#CBD5E1"
+                                                               VerticalAlignment="Center"
+                                                               TextWrapping="Wrap" />
 
-                                                <!-- Sensitive Tag Badge -->
-                                                <Border Grid.Column="2"
-                                                        Background="#B91C1C"
-                                                        CornerRadius="10"
-                                                        Padding="8,2"
-                                                        VerticalAlignment="Center"
-                                                        IsVisible="{Binding IsSensitive}">
-                                                    <TextBlock Text="Sensitive" Foreground="White" FontSize="11" />
-                                                </Border>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Expander>
+                                                    <!-- Editable Input Box -->
+                                                    <TextBox Grid.Column="1"
+                                                             Text="{Binding Value, Mode=TwoWay}"
+                                                             Background="#0F172A"
+                                                             Foreground="#F8FAFC"
+                                                             BorderBrush="#334155"
+                                                             BorderThickness="1"
+                                                             Padding="10,6"
+                                                             CornerRadius="6"
+                                                             FontSize="13"
+                                                             VerticalAlignment="Center" />
+
+                                                    <!-- Sensitive Badge -->
+                                                    <Border Grid.Column="2"
+                                                            Background="#7F1D1D"
+                                                            BorderBrush="#991B1B"
+                                                            BorderThickness="1"
+                                                            CornerRadius="10"
+                                                            Padding="8,3"
+                                                            VerticalAlignment="Center"
+                                                            IsVisible="{Binding IsSensitive}">
+                                                        <TextBlock Text="Sensitive"
+                                                                   FontSize="11"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="#FCA5A5" />
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Expander>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
