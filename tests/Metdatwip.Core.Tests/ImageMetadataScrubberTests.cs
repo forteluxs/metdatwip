@@ -82,7 +82,7 @@ public sealed class ImageMetadataScrubberTests
     }
 
     [Fact]
-    public async Task ScrubAsync_Throws_WhenOutputPathMatchesInputPath()
+    public async Task ScrubAsync_Succeeds_WhenOutputPathMatchesInputPath()
     {
         var sourceFixture = GetFixturePath("png-with-exif-gps.png");
         var tempDirectory = CreateTempDirectory();
@@ -94,8 +94,9 @@ public sealed class ImageMetadataScrubberTests
 
             var scrubber = new ImageMetadataScrubber(_classifier);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                scrubber.ScrubAsync(inputPath, inputPath, ScrubProfile.CreateStripAll()));
+            var result = await scrubber.ScrubAsync(inputPath, inputPath, ScrubProfile.CreateStripAll());
+            Assert.True(result.IsSuccess);
+            Assert.True(File.Exists(inputPath));
         }
         finally
         {

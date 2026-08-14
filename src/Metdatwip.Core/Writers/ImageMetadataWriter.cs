@@ -977,8 +977,8 @@ public sealed class ImageMetadataWriter : IMetadataWriter
 
         if (remaining.Count > 0)
         {
-            // Rebuild TIFF data
-            return BuildTiffData(remaining, ref appliedEdits, ref skippedEdits);
+            // Rebuild TIFF data with full edits list to ensure both IFD0 and ExifSubIFD tags are preserved
+            return BuildTiffData(edits, ref appliedEdits, ref skippedEdits);
         }
 
         return tiffData;
@@ -1001,7 +1001,12 @@ public sealed class ImageMetadataWriter : IMetadataWriter
 
         if (resolvedEdits.Count == 0) return [];
 
-        var sortedEdits = resolvedEdits.OrderBy(e => e.tagId).ToList();
+        // Separate IFD0 and ExifSubIFD tags
+        var ifd0Tags = resolvedEdits.Where(e => e.tagId < 0x8000).OrderBy(e => e.tagId).ToList();
+        var exifSubTags = resolvedEdits.Where(e => e.tagId >= 0x8000).OrderBy(e => e.tagId).ToList();
+
+        var hasExifSub = exifSubTags.Count > 0;
+        var ifd0EntryCount = ifd0Tags.Count + (hasExifSub ? 1 : 0);
 
         using var tiffStream = new MemoryStream();
         var writer = new BinaryWriter(tiffStream);
@@ -1013,19 +1018,48 @@ public sealed class ImageMetadataWriter : IMetadataWriter
         writer.Write((uint)8);
 
         // IFD0
-        writer.Write((ushort)sortedEdits.Count);
+        writer.Write((ushort)ifd0EntryCount);
 
-        var dataAreaOffset = 8 + 2 + (sortedEdits.Count * 12) + 4;
+        var ifd0DataAreaOffset = 8 + 2 + (ifd0EntryCount * 12) + 4;
         var dataArea = new MemoryStream();
 
-        foreach (var (tagId, value) in sortedEdits)
+        foreach (var (tagId, value) in ifd0Tags)
         {
-            WriteAsciiIfdEntry(writer, tagId, value, ref dataAreaOffset, dataArea);
+            WriteAsciiIfdEntry(writer, tagId, value, ref ifd0DataAreaOffset, dataArea);
             appliedEdits++;
         }
 
-        writer.Write((uint)0); // Next IFD offset
+        // ExifSubIFD pointer entry
+        if (hasExifSub)
+        {
+            var exifSubIfdOffset = ifd0DataAreaOffset;
+            writer.Write((ushort)0x8769);
+            writer.Write((ushort)4);
+            writer.Write((uint)1);
+            writer.Write((uint)exifSubIfdOffset);
+        }
+
+        // Next IFD offset
+        writer.Write((uint)0);
         writer.Write(dataArea.ToArray());
+
+        // ExifSubIFD
+        if (hasExifSub)
+        {
+            var exifSubDataAreaOffset = (int)tiffStream.Position + 2 + (exifSubTags.Count * 12) + 4;
+            var exifSubData = new MemoryStream();
+
+            writer.Write((ushort)exifSubTags.Count);
+
+            foreach (var (tagId, value) in exifSubTags)
+            {
+                WriteAsciiIfdEntry(writer, tagId, value, ref exifSubDataAreaOffset, exifSubData);
+                appliedEdits++;
+            }
+
+            writer.Write((uint)0);
+            writer.Write(exifSubData.ToArray());
+        }
 
         return tiffStream.ToArray();
     }
