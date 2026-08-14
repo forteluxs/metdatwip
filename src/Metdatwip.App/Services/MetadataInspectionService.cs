@@ -1,46 +1,16 @@
 using Metdatwip.Core.Abstractions;
-using Metdatwip.Core.Classification;
 using Metdatwip.Core.Models;
-using Metdatwip.Core.Readers;
+using Metdatwip.Core.Routing;
 
 namespace Metdatwip.App.Services;
 
 public sealed class MetadataInspectionService
 {
-    private static readonly string[] SupportedExtensions =
-    [
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".tif",
-        ".tiff",
-        ".heic",
-        ".heif",
-        ".webp",
-        ".docx",
-        ".xlsx",
-        ".pptx",
-        ".mp3",
-        ".wav",
-        ".mp4",
-        ".mov",
-        ".m4v",
-        ".mkv",
-        ".webm",
-    ];
+    private readonly FormatRouter _router;
 
-    private readonly IReadOnlyList<IMetadataReader> _readers;
-
-    public MetadataInspectionService()
+    public MetadataInspectionService(FormatRouter? router = null)
     {
-        var classifier = new RuleBasedSensitivityClassifier();
-        _readers =
-        [
-            new ImageMetadataReader(classifier),
-            new OoxmlMetadataReader(classifier),
-            new AudioMetadataReader(classifier),
-            new VideoMetadataReader(classifier),
-        ];
+        _router = router ?? FormatRouter.CreateDefault();
     }
 
     public async Task<InspectionResult> InspectAsync(IEnumerable<string> droppedPaths, CancellationToken cancellationToken = default)
@@ -71,8 +41,9 @@ public sealed class MetadataInspectionService
             return await InspectFileAsync(candidateFile, wasFolderInput: true, cancellationToken, note);
         }
 
+        var supported = string.Join(", ", _router.GetSupportedReaderExtensions());
         throw new InvalidOperationException(
-            $"No supported files found. Supported formats: {string.Join(", ", SupportedExtensions)}.");
+            $"No supported files found. Supported formats: {supported}.");
     }
 
     private async Task<InspectionResult> InspectFileAsync(
@@ -89,10 +60,16 @@ public sealed class MetadataInspectionService
     private IMetadataReader ResolveReader(string filePath)
     {
         var leadingBytes = ReadLeadingBytes(filePath, 16);
-        var reader = _readers.FirstOrDefault(candidate => candidate.CanRead(filePath, leadingBytes));
+        var route = _router.ResolveReader(filePath, leadingBytes);
 
-        return reader ?? throw new InvalidOperationException(
-            $"Unsupported file format for '{Path.GetFileName(filePath)}'. Supported formats: {string.Join(", ", SupportedExtensions)}.");
+        if (route.IsSupported && route.Handler is not null)
+        {
+            return route.Handler;
+        }
+
+        var supported = string.Join(", ", _router.GetSupportedReaderExtensions());
+        throw new InvalidOperationException(
+            $"Unsupported file format for '{Path.GetFileName(filePath)}'. Supported formats: {supported}.");
     }
 
     private string? FindFirstSupportedFile(string folderPath, CancellationToken cancellationToken)
@@ -129,8 +106,16 @@ public sealed class MetadataInspectionService
     {
         try
         {
-            reader = ResolveReader(filePath);
-            return true;
+            var leadingBytes = ReadLeadingBytes(filePath, 16);
+            var route = _router.ResolveReader(filePath, leadingBytes);
+            if (route.IsSupported && route.Handler is not null)
+            {
+                reader = route.Handler;
+                return true;
+            }
+
+            reader = null;
+            return false;
         }
         catch
         {

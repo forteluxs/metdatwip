@@ -50,14 +50,14 @@ static async Task<int> RunInspectAsync(string[] args)
     }
 
     var classifier = new RuleBasedSensitivityClassifier();
-    var router = CreateFormatRouter(classifier);
+    var router = FormatRouter.CreateDefault(classifier);
     var magicBytes = ReadLeadingBytes(targetPath, 16);
 
     var route = router.ResolveReader(targetPath, magicBytes);
     if (!route.IsSupported || route.Handler is null)
     {
         Console.Error.WriteLine(route.Message);
-        Console.Error.WriteLine("Supported inspect formats: JPEG, PNG, TIFF, HEIC/HEIF, WebP, DOCX, XLSX, PPTX.");
+        Console.Error.WriteLine("Supported inspect formats: JPEG, PNG, TIFF, HEIC/HEIF, WebP, PDF, DOCX, XLSX, PPTX, MP3, WAV, MP4, MOV, MKV, WebM.");
         return 3;
     }
 
@@ -98,7 +98,7 @@ static async Task<int> RunScrubAsync(string[] args)
 
     var options = optionsResult.Options!;
     var classifier = new RuleBasedSensitivityClassifier();
-    var router = CreateFormatRouter(classifier);
+    var router = FormatRouter.CreateDefault(classifier);
 
     if (!File.Exists(targetPath) && !Directory.Exists(targetPath))
     {
@@ -184,7 +184,7 @@ static async Task<int> RunScrubAsync(string[] args)
 
     if (processedCount == 0 && skippedCount > 0)
     {
-        Console.Error.WriteLine("No supported files found. Supported scrub formats: JPEG, PNG, DOCX, XLSX, PPTX.");
+        Console.Error.WriteLine("No supported files found. Supported scrub formats: JPEG, PNG, PDF, DOCX, XLSX, PPTX, MP3, WAV, MP4, MOV.");
         return 3;
     }
 
@@ -279,14 +279,14 @@ static async Task<int> RunEditAsync(string[] args)
     }
 
     var classifier = new RuleBasedSensitivityClassifier();
-    var router = CreateFormatRouter(classifier);
+    var router = FormatRouter.CreateDefault(classifier);
     var magicBytes = ReadLeadingBytes(targetPath, 16);
 
     var writerRoute = router.ResolveWriter(targetPath, magicBytes);
     if (!writerRoute.IsSupported || writerRoute.Handler is null)
     {
         Console.Error.WriteLine(writerRoute.Message);
-        Console.Error.WriteLine("Supported edit formats: JPEG, PNG, DOCX, XLSX, PPTX.");
+        Console.Error.WriteLine("Supported edit formats: JPEG, PNG, PDF, DOCX, XLSX, PPTX, MP3, WAV, MP4, MOV.");
         return 3;
     }
 
@@ -396,14 +396,18 @@ static async Task<int> RunRandomizeAsync(string[] args)
     {
         edits = MetadataRandomizer.GenerateVideoEdits();
     }
+    else if (ext is ".pdf")
+    {
+        edits = MetadataRandomizer.GeneratePdfEdits();
+    }
     else
     {
-        Console.Error.WriteLine("Randomize is supported for JPEG, PNG, DOCX, XLSX, PPTX, MP3, WAV, MP4, MOV, MKV, WEBM.");
+        Console.Error.WriteLine("Randomize is supported for JPEG, PNG, PDF, DOCX, XLSX, PPTX, MP3, WAV, MP4, MOV, MKV, WEBM.");
         return 3;
     }
 
     var classifier = new RuleBasedSensitivityClassifier();
-    var router = CreateFormatRouter(classifier);
+    var router = FormatRouter.CreateDefault(classifier);
     var magicBytes = ReadLeadingBytes(targetPath, 16);
 
     var writerRoute = router.ResolveWriter(targetPath, magicBytes);
@@ -565,148 +569,6 @@ static string BuildOutputPath(string inputPath, string originalTargetPath, strin
         ? Path.Combine(outputRoot, defaultFileName)
         : Path.Combine(outputRoot, relativeDirectory, defaultFileName);
 }
-
-static FormatRouter CreateFormatRouter(ISensitivityClassifier classifier)
-{
-    var router = new FormatRouter();
-
-    var imageReader = new ImageMetadataReader(classifier);
-    var imageScrubber = new ImageMetadataScrubber(classifier);
-    var imageWriter = new ImageMetadataWriter(classifier);
-    var ooxmlReader = new OoxmlMetadataReader(classifier);
-    var ooxmlScrubber = new OoxmlMetadataScrubber(classifier);
-    var ooxmlWriter = new OoxmlMetadataWriter(classifier);
-    var audioReader = new AudioMetadataReader(classifier);
-    var audioScrubber = new AudioMetadataScrubber(classifier);
-    var audioWriter = new AudioMetadataWriter(classifier);
-
-    var videoReader = new VideoMetadataReader(classifier);
-    var videoScrubber = new VideoMetadataScrubber(classifier);
-    var videoWriter = new VideoMetadataWriter(classifier);
-
-    router.RegisterReader(new FormatHandlerRegistration<IMetadataReader>(
-        "Image",
-        imageReader,
-        [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"],
-        MatchesImageMagic));
-
-    router.RegisterScrubber(new FormatHandlerRegistration<IMetadataScrubber>(
-        "Image",
-        imageScrubber,
-        [".jpg", ".jpeg", ".png"],
-        MatchesImageMagic));
-
-    router.RegisterWriter(new FormatHandlerRegistration<IMetadataWriter>(
-        "Image",
-        imageWriter,
-        [".jpg", ".jpeg", ".png"],
-        MatchesImageMagic));
-
-    router.RegisterReader(new FormatHandlerRegistration<IMetadataReader>(
-        "OOXML",
-        ooxmlReader,
-        [".docx", ".xlsx", ".pptx"],
-        MatchesZipMagic));
-
-    router.RegisterScrubber(new FormatHandlerRegistration<IMetadataScrubber>(
-        "OOXML",
-        ooxmlScrubber,
-        [".docx", ".xlsx", ".pptx"],
-        MatchesZipMagic));
-
-    router.RegisterWriter(new FormatHandlerRegistration<IMetadataWriter>(
-        "OOXML",
-        ooxmlWriter,
-        [".docx", ".xlsx", ".pptx"],
-        MatchesZipMagic));
-
-    router.RegisterReader(new FormatHandlerRegistration<IMetadataReader>(
-        "Audio",
-        audioReader,
-        [".mp3", ".wav"]));
-
-    router.RegisterScrubber(new FormatHandlerRegistration<IMetadataScrubber>(
-        "Audio",
-        audioScrubber,
-        [".mp3", ".wav"]));
-
-    router.RegisterWriter(new FormatHandlerRegistration<IMetadataWriter>(
-        "Audio",
-        audioWriter,
-        [".mp3", ".wav"]));
-
-    router.RegisterReader(new FormatHandlerRegistration<IMetadataReader>(
-        "Video",
-        videoReader,
-        [".mp4", ".mov", ".m4v", ".mkv", ".webm"]));
-
-    router.RegisterScrubber(new FormatHandlerRegistration<IMetadataScrubber>(
-        "Video",
-        videoScrubber,
-        [".mp4", ".mov", ".m4v", ".mkv", ".webm"]));
-
-    router.RegisterWriter(new FormatHandlerRegistration<IMetadataWriter>(
-        "Video",
-        videoWriter,
-        [".mp4", ".mov", ".m4v", ".mkv", ".webm"]));
-
-    router.RegisterWriter(new FormatHandlerRegistration<IMetadataWriter>(
-        "Audio",
-        audioWriter,
-        [".mp3", ".wav"]));
-
-    return router;
-}
-
-static bool MatchesImageMagic(byte[] bytes)
-{
-    // JPEG
-    if (bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
-    {
-        return true;
-    }
-
-    // PNG
-    if (bytes.Length >= 8 &&
-        bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 &&
-        bytes[4] == 0x0D && bytes[5] == 0x0A && bytes[6] == 0x1A && bytes[7] == 0x0A)
-    {
-        return true;
-    }
-
-    // TIFF (little- or big-endian)
-    if (bytes.Length >= 4 &&
-        ((bytes[0] == 0x49 && bytes[1] == 0x49 && bytes[2] == 0x2A && bytes[3] == 0x00) ||
-         (bytes[0] == 0x4D && bytes[1] == 0x4D && bytes[2] == 0x00 && bytes[3] == 0x2A)))
-    {
-        return true;
-    }
-
-    // WEBP container: RIFF....WEBP
-    if (bytes.Length >= 12 &&
-        bytes[0] == (byte)'R' && bytes[1] == (byte)'I' && bytes[2] == (byte)'F' && bytes[3] == (byte)'F' &&
-        bytes[8] == (byte)'W' && bytes[9] == (byte)'E' && bytes[10] == (byte)'B' && bytes[11] == (byte)'P')
-    {
-        return true;
-    }
-
-    // HEIF/HEIC ISO BMFF
-    if (bytes.Length >= 12 &&
-        bytes[4] == (byte)'f' && bytes[5] == (byte)'t' && bytes[6] == (byte)'y' && bytes[7] == (byte)'p')
-    {
-        var brand = System.Text.Encoding.ASCII.GetString(bytes, 8, 4);
-        return brand is "heic" or "heif" or "heix" or "hevc" or "hevx" or "mif1" or "msf1";
-    }
-
-    return false;
-}
-
-static bool MatchesZipMagic(byte[] bytes) =>
-    bytes.Length >= 4 &&
-    bytes[0] == (byte)'P' &&
-    bytes[1] == (byte)'K' &&
-    bytes[2] is 0x03 or 0x05 or 0x07 &&
-    bytes[3] is 0x04 or 0x06 or 0x08;
 
 static void PrintUsage()
 {

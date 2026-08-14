@@ -59,25 +59,48 @@
                 </StackPanel>
 
                 <!-- Action Toolbar -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <Button Content="📁 Browse File..."
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Content="📁 Browse File"
                             Click="OnBrowseFileClick"
                             Background="#047857"
                             Foreground="#F0FDF4"
                             BorderBrush="#10B981"
                             BorderThickness="1"
-                            Padding="14,9"
+                            Padding="12,8"
                             CornerRadius="8"
-                            FontSize="13"
+                            FontSize="12"
                             FontWeight="SemiBold" />
 
-                    <Button Content="🎲 Randomize Metadata"
+                    <Button Content="📂 Browse Folder"
+                            Click="OnBrowseFolderClick"
+                            Background="#065F46"
+                            Foreground="#ECFDF5"
+                            BorderBrush="#059669"
+                            BorderThickness="1"
+                            Padding="12,8"
+                            CornerRadius="8"
+                            FontSize="12"
+                            FontWeight="SemiBold" />
+
+                    <Button Content="📋 Export JSON"
+                            Command="{Binding ExportReportCommand}"
+                            Background="#1E293B"
+                            Foreground="#94A3B8"
+                            BorderBrush="#334155"
+                            BorderThickness="1"
+                            Padding="12,8"
+                            CornerRadius="8"
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            IsVisible="{Binding HasFileLoaded}" />
+
+                    <Button Content="🎲 Randomize"
                             Command="{Binding PopulateRandomMetadataCommand}"
                             Background="#059669"
                             Foreground="White"
-                            Padding="14,9"
+                            Padding="12,8"
                             CornerRadius="8"
-                            FontSize="13"
+                            FontSize="12"
                             FontWeight="SemiBold"
                             IsVisible="{Binding HasFileLoaded}" />
 
@@ -85,19 +108,19 @@
                             Command="{Binding SaveEditsCommand}"
                             Background="#E11D48"
                             Foreground="White"
-                            Padding="14,9"
+                            Padding="12,8"
                             CornerRadius="8"
-                            FontSize="13"
+                            FontSize="12"
                             FontWeight="SemiBold"
                             IsVisible="{Binding HasFileLoaded}" />
 
-                    <Button Content="🧹 Scrub All Privacy Data"
+                    <Button Content="🧹 Scrub Privacy Data"
                             Command="{Binding ScrubCurrentFileCommand}"
                             Background="#9F1239"
                             Foreground="White"
-                            Padding="14,9"
+                            Padding="12,8"
                             CornerRadius="8"
-                            FontSize="13"
+                            FontSize="12"
                             FontWeight="SemiBold"
                             IsVisible="{Binding HasFileLoaded}" />
                 </StackPanel>
@@ -119,15 +142,40 @@
                                    FontSize="16"
                                    FontWeight="Bold"
                                    Foreground="#FFF1F2" />
-                        <TextBlock Text="Supported Formats: JPEG, PNG, TIFF, HEIC, WebP | DOCX, XLSX, PPTX | MP3, WAV | MP4, MOV, MKV, WebM"
+                        <TextBlock Text="Supported Formats: JPEG, PNG, TIFF, HEIC, WebP | PDF, DOCX, XLSX, PPTX | MP3, WAV | MP4, MOV, MKV, WebM"
                                    FontSize="12"
                                    Foreground="#F472B6"
                                    TextWrapping="Wrap" />
                     </StackPanel>
+
+                    <!-- Quick Browse Buttons inside Drop Zone -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button Content="📁 Select File..."
+                                Click="OnBrowseFileClick"
+                                Background="#047857"
+                                Foreground="#F0FDF4"
+                                BorderBrush="#10B981"
+                                BorderThickness="1"
+                                Padding="14,9"
+                                CornerRadius="8"
+                                FontSize="13"
+                                FontWeight="Bold" />
+
+                        <Button Content="📂 Select Folder..."
+                                Click="OnBrowseFolderClick"
+                                Background="#065F46"
+                                Foreground="#ECFDF5"
+                                BorderBrush="#059669"
+                                BorderThickness="1"
+                                Padding="14,9"
+                                CornerRadius="8"
+                                FontSize="13"
+                                FontWeight="Bold" />
+                    </StackPanel>
                 </Grid>
 
-                <!-- Input Path Bar & Overwrite Checkbox -->
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                <!-- Input Path Bar, Profile Selector, and Overwrite Checkbox -->
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
                     <TextBox Grid.Column="0"
                              Text="{Binding InputFilePath, Mode=TwoWay}"
                              PlaceholderText="Paste file or directory path here (e.g. /home/user/media/photo.jpg)..."
@@ -149,9 +197,22 @@
                             FontSize="13"
                             FontWeight="Bold" />
 
-                    <CheckBox Grid.Column="2"
+                    <ComboBox Grid.Column="2"
+                              ItemsSource="{Binding AvailableScrubProfiles}"
+                              SelectedItem="{Binding SelectedScrubProfile, Mode=TwoWay}"
+                              Background="#1F0B15"
+                              Foreground="#FBCFE8"
+                              BorderBrush="#4C1D30"
+                              BorderThickness="1"
+                              CornerRadius="8"
+                              Padding="10,6"
+                              FontSize="13"
+                              VerticalAlignment="Center"
+                              ToolTip.Tip="Select metadata scrub profile" />
+
+                    <CheckBox Grid.Column="3"
                               IsChecked="{Binding OverwriteOriginalFile, Mode=TwoWay}"
-                              Content="⚡ Overwrite Original File (In-Place)"
+                              Content="⚡ Overwrite In-Place"
                               Foreground="#FBCFE8"
                               FontSize="13"
                               VerticalAlignment="Center" />

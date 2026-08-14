@@ -147,5 +147,28 @@ public static class MetadataRandomizer
         ];
     }
 
+    /// <summary>
+    /// Generates a set of realistic randomized <see cref="MetadataEdit"/> fields for a PDF document.
+    /// </summary>
+    public static List<MetadataEdit> GeneratePdfEdits()
+    {
+        var author = GetRandom(Artists);
+        var year = Rnd.Next(2022, 2026);
+        var month = Rnd.Next(1, 13);
+        var day = Rnd.Next(1, 28);
+        var dateStr = $"D:{year}{month:D2}{day:D2}120000+00'00'";
+
+        return
+        [
+            new MetadataEdit("PDF-Info", "Title", "Executive Privacy & Data Security Brief"),
+            new MetadataEdit("PDF-Info", "Author", author),
+            new MetadataEdit("PDF-Info", "Subject", "Official Corporate Documentation"),
+            new MetadataEdit("PDF-Info", "Creator", "Adobe Acrobat Pro 24.2"),
+            new MetadataEdit("PDF-Info", "Producer", "Quartz PDFContext"),
+            new MetadataEdit("PDF-Info", "Keywords", "security, privacy, compliance, enterprise"),
+            new MetadataEdit("PDF-Info", "CreationDate", dateStr),
+        ];
+    }
+
     private static T GetRandom<T>(T[] array) => array[Rnd.Next(array.Length)];
 }

@@ -1,0 +1,76 @@
+name: CI / CD
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run unit tests
+      run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test_results.trx"
+
+  publish:
+    name: Build & Package (${{ matrix.rid }})
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            artifact-name: metdatwip-win-x64
+          - os: macos-latest
+            rid: osx-x64
+            artifact-name: metdatwip-macos-x64
+          - os: macos-latest
+            rid: osx-arm64
+            artifact-name: metdatwip-macos-arm64
+          - os: ubuntu-latest
+            rid: linux-x64
+            artifact-name: metdatwip-linux-x64
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Publish Desktop App
+      run: dotnet publish src/Metdatwip.App -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -o ./dist/app
+
+    - name: Publish Headless CLI
+      run: dotnet publish src/Metdatwip.Cli -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -o ./dist/cli
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact-name }}
+        path: ./dist/

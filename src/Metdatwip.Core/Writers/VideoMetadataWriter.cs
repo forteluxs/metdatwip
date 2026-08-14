@@ -98,7 +98,6 @@ public sealed class VideoMetadataWriter : IMetadataWriter
         using var ms = new MemoryStream(inputBytes.Length + udtaAtom.Length);
 
         var pos = 0;
-        var udtaInserted = false;
 
         while (pos + 8 <= inputBytes.Length)
         {
@@ -143,7 +142,6 @@ public sealed class VideoMetadataWriter : IMetadataWriter
                 ms.Write(newMoovHeader, 0, 8);
                 ms.Write(moovBytes, 0, moovBytes.Length);
 
-                udtaInserted = true;
                 pos += boxSize;
                 continue;
             }

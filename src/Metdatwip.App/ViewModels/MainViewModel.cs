@@ -12,7 +12,7 @@ namespace Metdatwip.App.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
-    private readonly MetadataInspectionService _inspectionService = new();
+    private readonly MetadataInspectionService _inspectionService;
     private readonly FormatRouter _router;
 
     [ObservableProperty]
@@ -36,30 +36,24 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool overwriteOriginalFile = true;
 
+    [ObservableProperty]
+    private string selectedScrubProfile = "Strip All (Default)";
+
+    public ObservableCollection<string> AvailableScrubProfiles { get; } =
+    [
+        "Strip All (Default)",
+        "Keep Color Profile (ICC)",
+        "Keep Orientation",
+        "Keep ICC & Orientation",
+    ];
+
     public ObservableCollection<MetadataGroupViewModel> MetadataGroups { get; } = [];
 
     public MainViewModel()
     {
         var classifier = new RuleBasedSensitivityClassifier();
-        _router = new FormatRouter();
-
-        _router.RegisterScrubber(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataScrubber>(
-            "Image", new ImageMetadataScrubber(classifier), [".jpg", ".jpeg", ".png"]));
-        _router.RegisterScrubber(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataScrubber>(
-            "OOXML", new OoxmlMetadataScrubber(classifier), [".docx", ".xlsx", ".pptx"]));
-        _router.RegisterScrubber(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataScrubber>(
-            "Audio", new AudioMetadataScrubber(classifier), [".mp3", ".wav"]));
-        _router.RegisterScrubber(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataScrubber>(
-            "Video", new VideoMetadataScrubber(classifier), [".mp4", ".mov", ".m4v", ".mkv", ".webm"]));
-
-        _router.RegisterWriter(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataWriter>(
-            "Image", new ImageMetadataWriter(classifier), [".jpg", ".jpeg", ".png"]));
-        _router.RegisterWriter(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataWriter>(
-            "OOXML", new OoxmlMetadataWriter(classifier), [".docx", ".xlsx", ".pptx"]));
-        _router.RegisterWriter(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataWriter>(
-            "Audio", new AudioMetadataWriter(classifier), [".mp3", ".wav"]));
-        _router.RegisterWriter(new FormatHandlerRegistration<Metdatwip.Core.Abstractions.IMetadataWriter>(
-            "Video", new VideoMetadataWriter(classifier), [".mp4", ".mov", ".m4v", ".mkv", ".webm"]));
+        _router = FormatRouter.CreateDefault(classifier);
+        _inspectionService = new MetadataInspectionService(_router);
     }
 
     [RelayCommand]
@@ -143,9 +137,13 @@ public partial class MainViewModel : ViewModelBase
         {
             edits = MetadataRandomizer.GenerateVideoEdits();
         }
+        else if (ext is ".pdf")
+        {
+            edits = MetadataRandomizer.GeneratePdfEdits();
+        }
         else
         {
-            ErrorMessage = "Random metadata generation is supported for JPEG, PNG, DOCX, XLSX, PPTX, MP3, WAV, MP4, MOV, MKV, WEBM.";
+            ErrorMessage = "Random metadata generation is supported for JPEG, PNG, PDF, DOCX, XLSX, PPTX, MP3, WAV, MP4, MOV, MKV, WEBM.";
             return;
         }
 
@@ -214,9 +212,10 @@ public partial class MainViewModel : ViewModelBase
                 outputPath = Path.Combine(dir, $"{name}.cleaned{ext}");
             }
 
-            var result = await route.Handler.ScrubAsync(SourcePath, outputPath, ScrubProfile.CreateStripAll());
+            var profile = GetActiveProfile();
+            var result = await route.Handler.ScrubAsync(SourcePath, outputPath, profile);
 
-            StatusMessage = $"Scrubbed successfully! Saved to: {Path.GetFileName(outputPath)}";
+            StatusMessage = $"Scrubbed successfully ({SelectedScrubProfile})! Saved to: {Path.GetFileName(outputPath)}";
             await HandleDroppedPathsAsync([outputPath]);
         }
         catch (Exception ex)
@@ -228,6 +227,42 @@ public partial class MainViewModel : ViewModelBase
             IsBusy = false;
         }
     }
+
+    [RelayCommand]
+    private async Task ExportReportAsync()
+    {
+        if (!File.Exists(SourcePath)) return;
+
+        try
+        {
+            var dir = Path.GetDirectoryName(SourcePath) ?? Directory.GetCurrentDirectory();
+            var name = Path.GetFileNameWithoutExtension(SourcePath);
+            var reportPath = Path.Combine(dir, $"{name}.metadata_report.json");
+
+            var reportData = MetadataGroups.Select(g => new
+            {
+                Group = g.GroupName,
+                Fields = g.Fields.Select(f => new { f.Name, f.Value, f.IsSensitive }).ToList()
+            }).ToList();
+
+            var json = System.Text.Json.JsonSerializer.Serialize(reportData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(reportPath, json);
+
+            StatusMessage = $"Exported metadata report to: {Path.GetFileName(reportPath)}";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Export report failed: {ex.Message}";
+        }
+    }
+
+    private ScrubProfile GetActiveProfile() => SelectedScrubProfile switch
+    {
+        "Keep Color Profile (ICC)" => ScrubProfile.CreateKeepWhitelist(["icc/profile", "icc/"]),
+        "Keep Orientation" => ScrubProfile.CreateKeepWhitelist(["exif/orientation", "exif/112"]),
+        "Keep ICC & Orientation" => ScrubProfile.CreateKeepWhitelist(["icc/", "exif/orientation"]),
+        _ => ScrubProfile.CreateStripAll(),
+    };
 
     [RelayCommand]
     private async Task SaveEditsAsync()

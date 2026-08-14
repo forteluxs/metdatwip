@@ -2,19 +2,20 @@
 
 Privacy-first **metadata viewer & scrubber** for **Windows 10/11 and macOS**. Inspect exactly what personal information is hiding inside your files — GPS coordinates, camera serial numbers, author names, edit history, software fingerprints — then strip it before you share. Everything runs locally. No cloud, no telemetry.
 
-> **Status:** 🚧 Bootstrapping — see [PLAN.md](PLAN.md) and the [issue backlog](https://github.com/rwrife/metdatwip/issues).
+> **Status:** 🚀 Active Development — see [PLAN.md](PLAN.md) and the [issue backlog](https://github.com/forteluxs/metdatwip/issues).
 
 ---
 
 ## Overview
 
-Every photo, PDF, and Office document you share carries invisible metadata. A vacation photo can leak your home GPS coordinates. A "final" PDF can reveal the author, the software used, and revision timestamps. A Word doc can carry tracked-change history and comments long after you thought they were gone.
+Every photo, PDF, Office document, audio track, and video clip you share carries invisible metadata. A vacation photo can leak your home GPS coordinates. A "final" PDF can reveal the author, the software used, and revision timestamps. A Word doc can carry tracked-change history and comments. An MP4 or MP3 file can expose encoder IDs, hardware tags, and creator info.
 
 **metdatwip** gives you a clear, honest view of that hidden data and a one-click way to remove it:
 
-- **Inspect** — drag in a file and see a categorized, human-readable breakdown of every metadata field, with sensitive fields (GPS, personal names, serial numbers) flagged.
-- **Scrub** — remove all metadata, or keep a whitelist (e.g., strip GPS but keep orientation and color profile).
-- **Batch** — clean an entire folder of files in one pass, with a dry-run preview and safe output (never overwrites originals unless you ask).
+- **Inspect** — drag in a file or folder and see a categorized, human-readable breakdown of every metadata field, with sensitive fields (GPS, PII, email, phone, IP, device GUIDs) automatically flagged with smart regex classifiers.
+- **Scrub** — remove all metadata, or keep a profile (e.g., *Strip All*, *Keep Color Profile*, *Keep Orientation*, or *Keep ICC & Orientation*).
+- **Edit & Randomize** — spoof realistic dummy metadata or edit specific properties directly.
+- **Batch** — clean an entire folder of files in one pass, with safe in-place or separate output.
 - **Verify** — re-scan cleaned files to prove the metadata is actually gone.
 
 ## Motivation
@@ -22,25 +23,18 @@ Every photo, PDF, and Office document you share carries invisible metadata. A va
 Most people have no idea how much metadata they leak. The tools that exist are either buried in command-line utilities (`exiftool`), OS-specific, or upload your files to a website — which defeats the entire point of a *privacy* tool. metdatwip is a friendly desktop app that keeps your files on your machine.
 
 - **Privacy-first:** all processing is local by default. A file never leaves your computer.
-- **Cross-platform:** one consistent experience on Windows and macOS.
+- **Cross-platform:** one consistent experience on Windows, macOS, and Linux.
 - **Honest:** it shows you what's there before and after, so you can trust it worked.
 
-## Use cases
+## Supported formats
 
-- **Before posting photos online** — strip GPS location and camera serials from JPEGs/PNGs/HEIC.
-- **Before sending a PDF** — remove author, producer, creation software, and title metadata.
-- **Before sharing an Office doc** — clear author, company, tracked-change residue, and comments from `.docx`/`.xlsx`/`.pptx`.
-- **Whistleblowers / journalists** — verify a leaked document carries no identifying fingerprints.
-- **Bulk cleanup** — scrub a whole `Screenshots/` or `Exports/` folder before archiving or publishing.
-- **Sanity check** — audit your own files to learn what your camera/apps embed.
-
-## Supported formats (target)
-
-| Category | Formats |
-|----------|---------|
-| Images | JPEG, PNG, TIFF, HEIC/HEIF, WebP (EXIF, GPS, XMP, IPTC, ICC) |
-| Documents | PDF (Info dict + XMP) |
-| Office (OOXML) | DOCX, XLSX, PPTX (core/app properties, custom props) |
+| Category | Formats | Features |
+|----------|---------|----------|
+| **Images** | JPEG, PNG, TIFF, HEIC/HEIF, WebP | EXIF, GPS, XMP, IPTC, ICC Profiles |
+| **Documents** | PDF | Document Info dictionary (`/Info`) + XMP Stream (`/Metadata`) |
+| **Office (OOXML)** | DOCX, XLSX, PPTX | Core & Extended App properties, Custom metadata |
+| **Audio** | MP3, WAV | ID3v2.3/ID3v1 tags, RIFF `LIST INFO` chunks |
+| **Video** | MP4, MOV, M4V, MKV, WebM | ISO QuickTime atom metadata (`moov/udta/ilst`), Matroska tags |
 
 ## How to use
 

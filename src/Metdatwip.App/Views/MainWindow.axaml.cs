@@ -74,21 +74,25 @@ public partial class MainWindow : Window
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Select Image or Document File to Inspect",
+            Title = "Select File to Inspect",
             AllowMultiple = false,
             FileTypeFilter = new[]
             {
                 new FilePickerFileType("All Supported Formats")
                 {
-                    Patterns = new[] { "*.jpg", "*.jpeg", "*.png", "*.tif", "*.tiff", "*.webp", "*.heic", "*.heif", "*.docx", "*.xlsx", "*.pptx" }
+                    Patterns = new[] { "*.jpg", "*.jpeg", "*.png", "*.tif", "*.tiff", "*.webp", "*.heic", "*.heif", "*.pdf", "*.docx", "*.xlsx", "*.pptx", "*.mp3", "*.wav", "*.mp4", "*.mov", "*.m4v", "*.mkv", "*.webm" }
                 },
-                new FilePickerFileType("Images (*.jpg, *.png, *.webp)")
+                new FilePickerFileType("Images (*.jpg, *.png, *.webp, *.heic)")
                 {
-                    Patterns = new[] { "*.jpg", "*.jpeg", "*.png", "*.webp" }
+                    Patterns = new[] { "*.jpg", "*.jpeg", "*.png", "*.tif", "*.tiff", "*.webp", "*.heic", "*.heif" }
                 },
-                new FilePickerFileType("Office Documents (*.docx, *.xlsx, *.pptx)")
+                new FilePickerFileType("PDF & Office Documents (*.pdf, *.docx, *.xlsx, *.pptx)")
                 {
-                    Patterns = new[] { "*.docx", "*.xlsx", "*.pptx" }
+                    Patterns = new[] { "*.pdf", "*.docx", "*.xlsx", "*.pptx" }
+                },
+                new FilePickerFileType("Audio & Video (*.mp3, *.wav, *.mp4, *.mov, *.mkv, *.webm)")
+                {
+                    Patterns = new[] { "*.mp3", "*.wav", "*.mp4", "*.mov", "*.m4v", "*.mkv", "*.webm" }
                 }
             }
         });
@@ -96,6 +100,29 @@ public partial class MainWindow : Window
         if (files.Count > 0)
         {
             var selectedPath = files[0].Path.LocalPath;
+            if (!string.IsNullOrWhiteSpace(selectedPath))
+            {
+                await viewModel.HandleDroppedPathsAsync(new[] { selectedPath });
+            }
+        }
+    }
+
+    private async void OnBrowseFolderClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel) return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select Folder to Inspect",
+            AllowMultiple = false
+        });
+
+        if (folders.Count > 0)
+        {
+            var selectedPath = folders[0].Path.LocalPath;
             if (!string.IsNullOrWhiteSpace(selectedPath))
             {
                 await viewModel.HandleDroppedPathsAsync(new[] { selectedPath });
